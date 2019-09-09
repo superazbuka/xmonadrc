@@ -26,18 +26,8 @@ import qualified XMonad.StackSet as W
 import qualified XMonad.Util.ExtensibleState as XS
 
 myHandleEventHook = handleEventHook def
-    where
-    clockEventHook e = do
-        (TID timerId) <- XS.get
-        handleTimer timerId e restartWalpaperTimer
-        return $ All True
 
 myStartUpHook = startupHook def
-
-newtype TidState = TID TimerId
-
-instance ExtensionClass TidState where
-    initialValue = TID 0
 
 myTerminal = "st"
 
