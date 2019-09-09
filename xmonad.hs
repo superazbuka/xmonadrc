@@ -1,6 +1,7 @@
 import XMonad 
 import Codec.Binary.UTF8.String (encodeString)
 import Data.Maybe
+import Data.Monoid
 import XMonad.Util.WorkspaceCompare
 import Data.List
 import System.IO
@@ -13,21 +14,52 @@ import XMonad.Layout.Mosaic
 import XMonad.Hooks.ManageHelpers
 import XMonad.Hooks.EwmhDesktops
 import XMonad.Util.NamedWindows
+import XMonad.Config
+import XMonad.Util.Timer
 import qualified XMonad.StackSet as W
+import qualified XMonad.Util.ExtensibleState as XS
 
-defaults = defaultConfig 
+setRandomWalaper = spawn "find /home/askhat/Dropbox/covers -type f -name '*.*' -print0 | shuf -n1 -z | xargs -0 feh --bg-max"
+
+startWalpaperTimer = do
+	setRandomWalaper
+	timerId <- startTimer 10
+	XS.put (TID timerId)
+	return ()
+
+restartWalpaperTimer = do
+	startWalpaperTimer
+	return Nothing
+
+myHandleEventHook = (handleEventHook def) <+> clockEventHook
+    where
+        clockEventHook e = do
+			(TID timerId) <- XS.get
+			handleTimer timerId e restartWalpaperTimer
+			return $ All True
+
+myStartUpHook = (startupHook def) <+> startWalpaperTimer
+
+data TidState = TID TimerId
+
+instance ExtensionClass TidState where
+	initialValue = TID 0
+
+defaults = def 
     { terminal           = "st"
     , manageHook         = manageDocks
-        <+>  manageHook defaultConfig
+                       <+> manageHook def
+                       <+> (isFullscreen --> doFullFloat)
     , workspaces         = myWorkspaces
     , modMask            = mod4Mask
     , layoutHook         = avoidStruts myLayoutHook
-    , handleEventHook    = handleEventHook defaultConfig
-        <+> fullscreenEventHook
-        <+> docksEventHook
-        <+> ewmhDesktopsEventHook 
+    , handleEventHook    = myHandleEventHook 
+                       <+> fullscreenEventHook
+                       <+> docksEventHook
+                       <+> ewmhDesktopsEventHook 
     , borderWidth        = 1
     , normalBorderColor  = "black"
+	, startupHook 		 = myStartUpHook
     , focusedBorderColor = "orange" }
 
 myWorkspaces :: [String]
@@ -63,8 +95,8 @@ myLogHook outPut = do
     answer <- tabbedNames
     (io . outPut) $ encodeString $ workspacesView ++ "   " ++ answer
 
+
 main = do
-    spawn "find /home/askhat/Dropbox/covers -type f -name '*.*' -print0 | shuf -n1 -z | xargs -0 feh --bg-max"
     xmproc <- spawnPipe "/usr/bin/xmobar ~/.xmonad/xmobar.hs"
-    xmonad $ defaults
+    xmonad $ ewmh $ defaults
         { logHook = myLogHook $ System.IO.hPutStrLn xmproc }
