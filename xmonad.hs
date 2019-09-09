@@ -2,7 +2,11 @@ import XMonad
 import Codec.Binary.UTF8.String (encodeString)
 import Data.Maybe
 import Data.Monoid
+import qualified Data.Map as M
+import XMonad.Layout.Renamed (renamed, Rename(CutWordsLeft, Replace))
+import XMonad.Layout.LimitWindows (limitWindows, increaseLimit, decreaseLimit)
 import XMonad.Util.WorkspaceCompare
+import XMonad.Layout.SimplestFloat
 import Data.List
 import System.IO
 import XMonad.Util.Run
@@ -14,45 +18,40 @@ import XMonad.Layout.Mosaic
 import XMonad.Hooks.ManageHelpers
 import XMonad.Hooks.EwmhDesktops
 import XMonad.Util.NamedWindows
+import XMonad.Util.EZConfig (additionalKeysP)
+import XMonad.Util.NamedScratchpad
 import XMonad.Config
 import XMonad.Util.Timer
 import qualified XMonad.StackSet as W
 import qualified XMonad.Util.ExtensibleState as XS
 
-setRandomWalaper = spawn "find /home/askhat/Dropbox/covers -type f -name '*.*' -print0 | shuf -n1 -z | xargs -0 feh --bg-max"
-
-startWalpaperTimer = do
-    setRandomWalaper
-    timerId <- startTimer 10
-    XS.put (TID timerId)
-    return ()
-
-restartWalpaperTimer = do
-    startWalpaperTimer
-    return Nothing
-
-myHandleEventHook = handleEventHook def <+> clockEventHook
+myHandleEventHook = handleEventHook def
     where
-        clockEventHook e = do
-            (TID timerId) <- XS.get
-            handleTimer timerId e restartWalpaperTimer
-            return $ All True
+    clockEventHook e = do
+        (TID timerId) <- XS.get
+        handleTimer timerId e restartWalpaperTimer
+        return $ All True
 
-myStartUpHook = startupHook def <+> startWalpaperTimer
+myStartUpHook = startupHook def
 
 newtype TidState = TID TimerId
 
 instance ExtensionClass TidState where
     initialValue = TID 0
 
+myTerminal = "st"
+
+myKeys = [ ("M-n", namedScratchpadAction myScratchpads "terminal")
+         ]
+
 defaults = def 
-    { terminal           = "st"
+    { terminal           = myTerminal
     , manageHook         = manageDocks
                        <+> manageHook def
                        <+> (isFullscreen --> doFullFloat)
     , workspaces         = myWorkspaces
     , modMask            = mod4Mask
-    , layoutHook         = avoidStruts myLayoutHook
+    , layoutHook         = myLayoutHook
     , handleEventHook    = myHandleEventHook 
                        <+> fullscreenEventHook
                        <+> docksEventHook
@@ -60,14 +59,15 @@ defaults = def
     , borderWidth        = 1
     , normalBorderColor  = "black"
     , startupHook        = myStartUpHook
-    , focusedBorderColor = "orange" }
+    , focusedBorderColor = "orange"
+    } `additionalKeysP` myKeys
 
 myWorkspaces :: [String]
 myWorkspaces = map show [1..9]
 
-myLayoutHook = toggleLayouts (noBorders Full)
-    $ smartBorders
-    $ Full ||| mosaic 1 []
+myLayoutHook = avoidStruts
+             $ smartBorders
+             $ Full ||| mosaic 1 []
 
 myLogHook :: (String -> IO ()) -> X ()
 
@@ -95,6 +95,18 @@ myLogHook outPut = do
     answer <- tabbedNames
     (io . outPut) $ encodeString $ workspacesView ++ "   " ++ answer
 
+myScratchpads = [ NS "terminal" spawnTerm findTerm manageTerm
+                ]
+    where
+    termName = "scratchpad"
+    spawnTerm = myTerminal ++ " -n " ++ termName
+    findTerm  = resource =? termName
+    manageTerm = customFloating $ W.RationalRect l t w h
+        where
+        h = 0.9
+        w = 0.9
+        t = 0.9 - h
+        l = 0.9 - w
 
 main = do
     xmproc <- spawnPipe "/usr/bin/xmobar ~/.xmonad/xmobar.hs"
