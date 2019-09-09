@@ -22,28 +22,28 @@ import qualified XMonad.Util.ExtensibleState as XS
 setRandomWalaper = spawn "find /home/askhat/Dropbox/covers -type f -name '*.*' -print0 | shuf -n1 -z | xargs -0 feh --bg-max"
 
 startWalpaperTimer = do
-	setRandomWalaper
-	timerId <- startTimer 10
-	XS.put (TID timerId)
-	return ()
+    setRandomWalaper
+    timerId <- startTimer 10
+    XS.put (TID timerId)
+    return ()
 
 restartWalpaperTimer = do
-	startWalpaperTimer
-	return Nothing
+    startWalpaperTimer
+    return Nothing
 
-myHandleEventHook = (handleEventHook def) <+> clockEventHook
+myHandleEventHook = handleEventHook def <+> clockEventHook
     where
         clockEventHook e = do
-			(TID timerId) <- XS.get
-			handleTimer timerId e restartWalpaperTimer
-			return $ All True
+            (TID timerId) <- XS.get
+            handleTimer timerId e restartWalpaperTimer
+            return $ All True
 
-myStartUpHook = (startupHook def) <+> startWalpaperTimer
+myStartUpHook = startupHook def <+> startWalpaperTimer
 
-data TidState = TID TimerId
+newtype TidState = TID TimerId
 
 instance ExtensionClass TidState where
-	initialValue = TID 0
+    initialValue = TID 0
 
 defaults = def 
     { terminal           = "st"
@@ -59,7 +59,7 @@ defaults = def
                        <+> ewmhDesktopsEventHook 
     , borderWidth        = 1
     , normalBorderColor  = "black"
-	, startupHook 		 = myStartUpHook
+    , startupHook        = myStartUpHook
     , focusedBorderColor = "orange" }
 
 myWorkspaces :: [String]
