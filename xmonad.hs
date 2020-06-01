@@ -33,7 +33,7 @@ myHandleEventHook = handleEventHook def
 
 myStartUpHook = startupHook def
 
-myTerminal = "st"
+myTerminal = "alacritty"
 
 myKeys = [ ("M-n", namedScratchpadAction myScratchpads "terminal"),
            ("M-c", kill),
@@ -63,7 +63,7 @@ myWorkspaces = map show [1..9]
 
 myLayoutHook = avoidStruts
              $ smartBorders
-             $ Full ||| mosaic 1 []
+             $ Full ||| Tall 1 (3/100) (1/2)
 
 myLogHook :: (String -> IO ()) -> X ()
 
@@ -80,8 +80,8 @@ myLogHook outPut = do
                           | otherwise              = xmobarColor "orange" "black" $ W.tag ws
         tabbedNames = showStack $ W.stack current
         show'       = concatMap mShow
-        mShow name  = "[" ++ show name                                ++ "]"
-        mShowC name = "[" ++ xmobarColor "orange" "black" (show name) ++ "]"
+        mShow name  = "[" ++ takeWhile (\x -> (x /= ' ')) (show name)                                ++ "]"
+        mShowC name = "[" ++ xmobarColor "orange" "black" (takeWhile (\x -> (x /= ' '))  (show name)) ++ "]"
         showStack Nothing = return "" 
         showStack (Just a) = do
             prvWs    <- mapM getName $ W.up a
@@ -95,7 +95,7 @@ myScratchpads = [ NS "terminal" spawnTerm findTerm manageTerm
                 ]
     where
     termName = "scratchpad"
-    spawnTerm = myTerminal ++ " -n " ++ termName
+    spawnTerm = "st" ++ " -n " ++ termName
     findTerm  = resource =? termName
     manageTerm = customFloating $ W.RationalRect (1/6) (1/6) (2/3) (2/3)
 
