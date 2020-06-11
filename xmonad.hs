@@ -95,7 +95,7 @@ myScratchpads = [ NS "terminal" spawnTerm findTerm manageTerm
                 ]
     where
     termName = "scratchpad"
-    spawnTerm = "st" ++ " -n " ++ termName
+    spawnTerm = myTerminal ++ " --class " ++ termName
     findTerm  = resource =? termName
     manageTerm = customFloating $ W.RationalRect (1/6) (1/6) (2/3) (2/3)
 
